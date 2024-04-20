@@ -115,6 +115,40 @@ def natal_chart(zz, gen):
     return clear_a
 
 
+def compatibility_parser(z_user, z_partner, gender_partner):
+    perevod = {
+        'овен': 'oven',
+        'телец': 'telec',
+        'близнецы': 'bliznecy',
+        'рак': 'rak',
+        'лев': 'lev',
+        'дева': 'deva',
+        'весы': 'vesy',
+        'скорпион': 'scorpion',
+        'стрелец': 'strelec',
+        'козерог': 'kozerog',
+        'водолей': 'vodolei',
+        'рыбы': 'ryby'
+    }
+    if gender_partner == 'м':
+        z_male = z_partner
+        z_female = z_user
+    else:
+        z_male = z_user
+        z_female = z_partner
+
+    url = f"https://uznayvse.ru/goroskop/zhenshina-{perevod[z_female.lower()]}-muzhchina-{perevod[z_male.lower()]}-sovmestimost-znaka-zodiaka.html"
+    response = requests.get(url)
+    soup = b(response.text, 'html.parser')
+    a = soup.find_all('div', class_='w-full kuv_content')
+
+    clear_a = [i.text for i in a][0]
+    clear_a = clear_a[clear_a.index('Достоинства союза') + len('Достоинства союза'):clear_a.index('Интимная жизнь')]
+    clear_a = [i.split('\n\n\n\n\n\n\n')[0] for i in clear_a.split('Недостатки союза')]
+
+    return clear_a[0], clear_a[1]
+
+
 async def start(update, context):
     reply_keyboard = [['/data', '/zodiac', '/natal'], ['/horoscope', '/compatibility']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
@@ -308,6 +342,87 @@ async def natal(update, context):
                                         'Для этого вызовите /questionary')
 
 
+async def compatibility(update, context):
+    user = update.effective_user
+
+    with open('user_data.csv', 'r', encoding="utf8") as csvfile:
+        reader = list(csv.DictReader(csvfile, delimiter=';', quotechar='"'))
+    new_user = True
+
+    for person in reader:
+        if person['id'] == str(user.id):
+            new_user = False
+
+    if new_user:
+        await update.message.reply_text('Вы еще не заполняли данные о себе\n'
+                                        'Для этого вызовите /questionary')
+
+    else:
+        await update.message.reply_text(
+            'Укажите дату рождения, знак зодиака или username человека, если он пользовался этим ботом(23.04.2024/телец/@Vovan_228339)')
+        return 1
+
+
+async def first_comp(update, context):
+    user = update.effective_user
+    mes = update.message.text
+
+    with open('user_data.csv', 'r', encoding="utf8") as csvfile:
+        reader = list(csv.DictReader(csvfile, delimiter=';', quotechar='"'))
+
+    for person in reader:
+        if person['id'] == str(user.id):
+            user_data = person
+
+    try:
+        if mes in ['овен', 'телец', 'близнецы', 'рак', 'лев', 'дева', 'весы', 'скорпион', 'стрелец', 'козерог',
+                   'водолей', 'рыбы']:
+            zz_partner = mes
+
+        elif mes[0] == '@':
+            partner_username = mes[1:]
+
+            with open('user_data.csv', 'r', encoding="utf8") as csvfile:
+                reader = list(csv.DictReader(csvfile, delimiter=';', quotechar='"'))
+            partner_data = ''
+
+            for person in reader:
+                if person['username'] == partner_username:
+                    partner_data = person
+
+            if partner_data:
+                if partner_data['gender'] != user_data['gender']:
+                    zz_partner = partner_data['zodiac']
+
+                else:
+                    await update.message.reply_text("Укажите человека противоположного пола")
+                    return 1
+
+            else:
+                await update.message.reply_text("Такой пользователь не зарегистрирован")
+                return 1
+
+        else:
+            day, month, year = [int(i) for i in mes.split('.')]
+
+            if day in range(1, 32) and month in range(1, 13) and year in range(1900, 2025):
+                zz_partner = date_to_zodiac(mes)
+
+            else:
+                await update.message.reply_text("Укажите существующую дату")
+                return 1
+
+        advantages, disadvantages = compatibility_parser(user_data['zodiac'], zz_partner, 'пол чела')
+        await update.message.reply_text('Достоинства союза' + advantages)
+        await update.message.reply_text('Недостатки союза' + disadvantages)
+
+        return ConversationHandler.END
+
+    except:
+        await update.message.reply_text("Внимательно посмотрите пример и попробуйте еще раз")
+        return 1
+
+
 def main():
     token_tgb = '7193208629:AAE4UJ5w3dlRZGVJvPe5PRNVbWzMjEClIwQ'
     application = Application.builder().token(token_tgb).build()
@@ -321,7 +436,16 @@ def main():
         fallbacks=[CommandHandler('stop', stop)]
     )
 
+    comp_handler = ConversationHandler(
+        entry_points=[CommandHandler('compatibility', compatibility)],
+        states={
+            1: [MessageHandler(filters.TEXT & ~filters.COMMAND, first_comp)],
+        },
+        fallbacks=[CommandHandler('stop', stop)]
+    )
+
     application.add_handler(conv_handler)
+    application.add_handler(comp_handler)
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
