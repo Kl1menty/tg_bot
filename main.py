@@ -162,6 +162,23 @@ async def stop(update, context):
     return ConversationHandler.END
 
 
+async def check_zodiac(update, context):
+    user = update.effective_user
+
+    with open('user_data.csv', 'r', encoding="utf8") as csvfile:
+        reader = list(csv.DictReader(csvfile, delimiter=';', quotechar='"'))
+
+    try:
+        for person in reader:
+            if person['id'] == str(user.id):
+                user_data = person
+        await update.message.reply_text(f'Ваш знак зодиака: {user_data["zodiac"]}')
+
+    except:
+        await update.message.reply_text('Вы еще не заполняли данные о себе\n'
+                                        'Для этого вызовите /questionary')
+
+
 def main():
     token_tgb = '7193208629:AAE4UJ5w3dlRZGVJvPe5PRNVbWzMjEClIwQ'
     application = Application.builder().token(token_tgb).build()
@@ -180,6 +197,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
 
+    application.add_handler(CommandHandler("zodiac", check_zodiac))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
     application.run_polling()
