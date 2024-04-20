@@ -81,6 +81,40 @@ def daily_horoscope(zz, gen):
     return response_1, response_2
 
 
+def natal_chart(zz, gen):
+    perevod = {
+        'овен': 'oven',
+        'телец': 'telec',
+        'близнецы': 'bliznecy',
+        'рак': 'rak',
+        'лев': 'lev',
+        'дева': 'deva',
+        'весы': 'vesy',
+        'скорпион': 'scorpion',
+        'стрелец': 'strelec',
+        'козерог': 'kozerog',
+        'водолей': 'vodolei',
+        'рыбы': 'ryby'
+    }
+
+    if gen == 'м':
+        url = f"https://uznayvse.ru/goroskop/muzhchina-{perevod[zz.lower()]}-harakteristika-znaka-zodiaka.html"
+    elif gen == 'ж':
+        url = f"https://uznayvse.ru/goroskop/zhenshina-{perevod[zz.lower()]}-harakteristika-znaka-zodiaka.html"
+
+    response = requests.get(url)
+    soup = b(response.text, 'html.parser')
+    a = soup.find_all('div', class_='w-full kuv_content')
+
+    clear_a = [i.text for i in a][0]
+    clear_a = (clear_a.split('\nХарактер')[1]).split('\nДостоинства')[0]
+
+    if '\n\n\n' in clear_a:
+        clear_a = clear_a.split('\n\n\n')[0]
+
+    return clear_a
+
+
 async def start(update, context):
     reply_keyboard = [['/data', '/zodiac', '/natal'], ['/horoscope', '/compatibility']]
     markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
@@ -257,6 +291,23 @@ async def horoscope(update, context):
                                         'Для этого вызовите /questionary')
 
 
+async def natal(update, context):
+    user = update.effective_user
+
+    with open('user_data.csv', 'r', encoding="utf8") as csvfile:
+        reader = list(csv.DictReader(csvfile, delimiter=';', quotechar='"'))
+
+    try:
+        for person in reader:
+            if person['id'] == str(user.id):
+                user_data = person
+        await update.message.reply_text(natal_chart(user_data['zodiac'], user_data['gender']))
+
+    except:
+        await update.message.reply_text('Вы еще не заполняли данные о себе\n'
+                                        'Для этого вызовите /questionary')
+
+
 def main():
     token_tgb = '7193208629:AAE4UJ5w3dlRZGVJvPe5PRNVbWzMjEClIwQ'
     application = Application.builder().token(token_tgb).build()
@@ -278,6 +329,7 @@ def main():
     application.add_handler(CommandHandler("data", show_data))
     application.add_handler(CommandHandler("zodiac", check_zodiac))
     application.add_handler(CommandHandler("horoscope", horoscope))
+    application.add_handler(CommandHandler("natal", natal))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
     application.run_polling()
