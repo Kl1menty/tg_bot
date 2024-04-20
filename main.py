@@ -162,6 +162,33 @@ async def stop(update, context):
     return ConversationHandler.END
 
 
+async def show_data(update, context):
+    user = update.effective_user
+
+    with open('user_data.csv', 'r', encoding="utf8") as csvfile:
+        reader = list(csv.DictReader(csvfile, delimiter=';', quotechar='"'))
+
+    try:
+        for person in reader:
+            if person['id'] == str(user.id):
+                user_data = person
+
+        if user_data["gender"] == 'м':
+            gen = 'мужской'
+
+        elif user_data["gender"] == 'ж':
+            gen = 'женский'
+
+        await update.message.reply_text(f'Ваш пол: {gen}\n'
+                                        f'Ваша дата рождения: {user_data["date"]}\n'
+                                        '\n'
+                                        'Если хотите изменить данные вызовете /questionary')
+
+    except:
+        await update.message.reply_text('Вы еще не заполняли данные о себе\n'
+                                        'Для этого вызовите /questionary')
+
+
 async def check_zodiac(update, context):
     user = update.effective_user
 
@@ -197,6 +224,7 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
 
+    application.add_handler(CommandHandler("data", show_data))
     application.add_handler(CommandHandler("zodiac", check_zodiac))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
