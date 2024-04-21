@@ -375,9 +375,9 @@ async def first_comp(update, context):
             user_data = person
 
     try:
-        if mes in ['овен', 'телец', 'близнецы', 'рак', 'лев', 'дева', 'весы', 'скорпион', 'стрелец', 'козерог',
+        if mes.lower() in ['овен', 'телец', 'близнецы', 'рак', 'лев', 'дева', 'весы', 'скорпион', 'стрелец', 'козерог',
                    'водолей', 'рыбы']:
-            zz_partner = mes
+            zz_partner = mes.lower()
 
         elif mes[0] == '@':
             partner_username = mes[1:]
