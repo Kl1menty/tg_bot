@@ -115,7 +115,7 @@ def natal_chart(zz, gen):
     return clear_a
 
 
-def compatibility_parser(z_user, z_partner, gender_partner):
+def compatibility_parser(z_user, z_partner, gender_user):
     perevod = {
         'овен': 'oven',
         'телец': 'telec',
@@ -130,12 +130,12 @@ def compatibility_parser(z_user, z_partner, gender_partner):
         'водолей': 'vodolei',
         'рыбы': 'ryby'
     }
-    if gender_partner == 'м':
-        z_male = z_partner
-        z_female = z_user
-    else:
+    if gender_user == 'м':
         z_male = z_user
         z_female = z_partner
+    else:
+        z_male = z_partner
+        z_female = z_user
 
     url = f"https://uznayvse.ru/goroskop/zhenshina-{perevod[z_female.lower()]}-muzhchina-{perevod[z_male.lower()]}-sovmestimost-znaka-zodiaka.html"
     response = requests.get(url)
@@ -412,7 +412,7 @@ async def first_comp(update, context):
                 await update.message.reply_text("Укажите существующую дату")
                 return 1
 
-        advantages, disadvantages = compatibility_parser(user_data['zodiac'], zz_partner, 'пол чела')
+        advantages, disadvantages = compatibility_parser(user_data['zodiac'], zz_partner, user_data['gender'])
         await update.message.reply_text('Достоинства союза' + advantages)
         await update.message.reply_text('Недостатки союза' + disadvantages)
 
